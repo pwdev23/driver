@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../utils/geolocator.dart';
+import 'driver_on_board_page.dart' show DriverOnBoardArgs;
+
 class AuthPage extends StatefulWidget {
   static const routeName = '/';
 
@@ -23,8 +26,11 @@ class _AuthPageState extends State<AuthPage> {
 
   Future<void> _auth() async {
     final nav = Navigator.of(context);
-    Future.delayed(const Duration(seconds: 3), () {
-      nav.pushReplacementNamed('/driver-on-board');
-    });
+    await determinePosition().then(
+      (p) => nav.pushReplacementNamed(
+        '/driver-on-board',
+        arguments: DriverOnBoardArgs(p),
+      ),
+    );
   }
 }

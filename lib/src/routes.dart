@@ -10,7 +10,16 @@ class _NoRoute extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      child: Center(child: Text('No route defined for $routeName')),
+      child: Center(
+        child: Text.rich(
+          TextSpan(
+            text: 'No route defined for ',
+            children: [
+              TextSpan(text: routeName, style: TextStyle(color: Colors.blue)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -20,7 +29,10 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case '/':
       return MaterialPageRoute(builder: (_) => const AuthPage());
     case '/driver-on-board':
-      return MaterialPageRoute(builder: (_) => const DriverOnBoardPage());
+      final args = settings.arguments as DriverOnBoardArgs;
+      return MaterialPageRoute(
+        builder: (_) => DriverOnBoardPage(position: args.position),
+      );
     default:
       return MaterialPageRoute(
         builder: (_) => _NoRoute(routeName: settings.name!),
