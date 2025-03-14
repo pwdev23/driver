@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'text_theme.dart';
+
 const kSeedColor = Color(0xff1c4cf1);
 const kContrastLevel = -0.5;
 
@@ -23,6 +25,7 @@ final theme = ThemeData.light().copyWith(
     contrastLevel: kContrastLevel,
     surface: Color(0xffffffff),
   ),
+  textTheme: textTheme,
   scaffoldBackgroundColor: Color.fromRGBO(245, 245, 247, 1),
   appBarTheme: AppBarTheme(
     centerTitle: false,
@@ -44,6 +47,7 @@ final darkTheme = ThemeData.dark().copyWith(
     contrastLevel: kContrastLevel,
     surface: Color.fromRGBO(13, 17, 22, 1),
   ),
+  textTheme: textTheme,
   scaffoldBackgroundColor: Color.fromRGBO(2, 4, 10, 1),
   appBarTheme: AppBarTheme(
     centerTitle: false,
