@@ -1,15 +1,17 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../environments.dart';
+import '../models/osrm_route.dart';
 import '../utils/geolocator.dart';
+import '../utils/open_source_routing_machine.dart';
 import '../utils/url_launcher.dart';
 import 'driver_on_board_widget.dart';
-
-// Marker simulation
-const kMarkers = [LatLng(-6.9312534897645, 107.68609161809115)];
 
 class DriverOnBoardPage extends StatefulWidget {
   static const routeName = '/driver-on-board';
@@ -25,6 +27,7 @@ class DriverOnBoardPage extends StatefulWidget {
 class _DriverOnBoardPageState extends State<DriverOnBoardPage> {
   final MapController _controller = MapController();
   bool _positionLoading = false;
+  List<LatLng> _points = [];
 
   @override
   void dispose() {
@@ -35,27 +38,46 @@ class _DriverOnBoardPageState extends State<DriverOnBoardPage> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
-    final urlTemplate = isDark ? kUrlTemplateDark : kUrlTemplate;
-
+    final urlTemplate =
+        isDark ? '$kUrlTemplateDark?api_key=$kStadiaMapsApiKey' : kUrlTemplate;
+    final overlayStyle =
+        Platform.isIOS
+            ? null
+            : const SystemUiOverlayStyle(statusBarColor: Colors.transparent);
+    final iconButtonStyle = IconButton.styleFrom(
+      backgroundColor: colors.surface,
+      foregroundColor: colors.onSurface,
+    );
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
-        centerTitle: true,
-        title: TextButton.icon(
+        systemOverlayStyle: overlayStyle,
+        centerTitle: false,
+        title: _IslandButton(),
+        leading: IconButton(
+          style: iconButtonStyle,
           onPressed: () {},
-          label: Text(
-            '00.00',
-            style: textTheme.titleMedium!.copyWith(color: colors.onSurface),
-          ),
-          style: TextButton.styleFrom(
-            backgroundColor: colors.surface,
-            foregroundColor: colors.onSurface,
-          ),
-          icon: Icon(Icons.electric_bolt, color: colors.surfaceTint),
+          icon: Icon(Icons.menu),
         ),
+        actions: [
+          IconButton(
+            style: iconButtonStyle,
+            onPressed: () => _onMyLocation(),
+            icon: Visibility(
+              visible: !_positionLoading,
+              replacement: _TinyCircularProgressIndicator(),
+              child: Icon(Icons.my_location),
+            ),
+          ),
+          IconButton(
+            style: iconButtonStyle,
+            onPressed: () => _onGetRoute(),
+            icon: Icon(Icons.navigation),
+          ),
+          SizedBox(width: 4.0),
+        ],
       ),
       body: StreamBuilder<Position>(
         initialData: widget.position,
@@ -100,36 +122,22 @@ class _DriverOnBoardPageState extends State<DriverOnBoardPage> {
                     height: 24.0,
                     child: MapMarker(markerType: MarkerType.you),
                   ),
-                  ...kMarkers.map(
-                    (e) => Marker(
-                      point: e,
-                      rotate: true,
-                      child: MapMarker(markerType: MarkerType.hitchhike),
-                    ),
+                ],
+              ),
+              PolylineLayer(
+                polylines: [
+                  Polyline(
+                    points: _points.isEmpty ? [latLng] : _points,
+                    color: colors.primary.withAlpha(100),
+                    borderStrokeWidth: 4.0,
+                    borderColor: colors.primary.withAlpha(200),
+                    strokeWidth: 6.0,
                   ),
                 ],
               ),
             ],
           );
         },
-      ),
-      bottomNavigationBar: Container(
-        color: colors.surface,
-        alignment: Alignment.center,
-        height: kToolbarHeight,
-        child: Text(
-          'You\'re offline',
-          textAlign: TextAlign.center,
-          style: textTheme.titleLarge!.copyWith(color: colors.onSurface),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _onMyLocation(),
-        label: Visibility(
-          visible: !_positionLoading,
-          replacement: _TinyCircularProgressIndicator(),
-          child: Icon(Icons.my_location),
-        ),
       ),
     );
   }
@@ -141,6 +149,31 @@ class _DriverOnBoardPageState extends State<DriverOnBoardPage> {
       _controller.moveAndRotate(latLng, 13, 0.0);
       setState(() => _positionLoading = false);
     });
+  }
+
+  Future<void> _onGetRoute() async {
+    // Mock coordinates
+    final start = LatLng(-6.940583170466513, 107.68141384551566);
+    final end = LatLng(-6.955544741198372, 107.69851171743613);
+
+    await getOsrmRoute(start: start, end: end).then((v) {
+      _points = _getPoints(v);
+    });
+
+    setState(() {});
+  }
+
+  List<LatLng> _getPoints(OsrmRoute route) {
+    List<LatLng> points = [];
+
+    for (var e in route.legs![0].steps!) {
+      final lat = e.maneuver!.location![1];
+      final lng = e.maneuver!.location![0];
+      final latLng = LatLng(lat, lng);
+      points.add(latLng);
+    }
+
+    return points;
   }
 }
 
@@ -158,6 +191,39 @@ class _TinyCircularProgressIndicator extends StatelessWidget {
     return const CircularProgressIndicator(
       strokeWidth: 2.5,
       constraints: BoxConstraints(minWidth: 24, minHeight: 24),
+    );
+  }
+}
+
+class _IslandButton extends StatelessWidget {
+  const _IslandButton();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return RawMaterialButton(
+      onPressed: () {},
+      padding: const EdgeInsets.fromLTRB(6.0, 4.0, 12.0, 4.0),
+      fillColor: colors.inverseSurface,
+      textStyle: TextStyle(color: colors.onInverseSurface),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.all(Radius.circular(24.0)),
+      ),
+      constraints: const BoxConstraints(
+        minWidth: 0.0,
+        minHeight: 0.0,
+        maxHeight: double.infinity,
+        maxWidth: double.infinity,
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.bolt),
+          Text('00.00', style: textTheme.titleMedium),
+        ],
+      ),
     );
   }
 }

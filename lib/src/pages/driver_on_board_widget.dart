@@ -12,18 +12,6 @@ class MapMarker extends StatelessWidget {
   Widget build(BuildContext context) {
     final asset = 'svg/marker_${markerType.name}.svg';
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(50),
-            spreadRadius: 2,
-            blurRadius: 6,
-          ),
-        ],
-      ),
-      child: SvgPicture.asset(asset),
-    );
+    return SvgPicture.asset(asset);
   }
 }
